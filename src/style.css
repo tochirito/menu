@@ -1,0 +1,17 @@
+canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+main {
+  position: absolute;
+  z-index: 10;
+}
+
+#cubesGrid {
+  display: grid;
+  width: 100vw;
+  height: 100vh;
+  gap: 1px;
+}
