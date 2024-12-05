@@ -27,6 +27,9 @@ document.body.appendChild(renderer.domElement);
 //luces
 const ambientLight = new THREE.AmbientLight(0xffffff, 2);
 
+//niebla:
+scene.fog = new THREE.Fog(0xdfe9f3, 60, 100);
+
 //GRID
 const gridHelper = new THREE.GridHelper(window.innerWidth, 120);
 
