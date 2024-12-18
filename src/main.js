@@ -2,12 +2,13 @@ import { OrbitControls } from "three/examples/jsm/Addons.js";
 import "./style.css";
 
 import * as THREE from "three";
+import { ThreeMFLoader } from "three/examples/jsm/Addons.js";
 
 const scene = new THREE.Scene();
-// const spaceBackground = new THREE.TextureLoader().load(
-//   "/images/black-backdrop.webp"
-// );
-const spaceBackground = new THREE.TextureLoader().load("/images/images.jpeg");
+const spaceBackground = new THREE.TextureLoader().load(
+  "/images/black-backdrop.webp"
+);
+// const spaceBackground = new THREE.TextureLoader().load("/images/images.jpeg");
 
 scene.background = spaceBackground;
 
@@ -33,7 +34,7 @@ document.body.appendChild(renderer.domElement);
 const ambientLight = new THREE.AmbientLight(0xdfe9f3, 0.5);
 
 //niebla:
-// scene.fog = new THREE.Fog(0x2e3132, 40, 110);
+scene.fog = new THREE.Fog(0x2e3132, 40, 210);
 
 //GRID
 const gridHelper = new THREE.GridHelper(window.innerWidth, 120);
@@ -41,18 +42,76 @@ const gridHelper = new THREE.GridHelper(window.innerWidth, 120);
 //Controles
 const controls = new OrbitControls(camera, renderer.domElement);
 
-const glassMaterial = new THREE.MeshPhysicalMaterial();
-glassMaterial.transmission = 1.0;
-// glassMaterial.roughness = 0.0;
-glassMaterial.ior = 0.7;
-glassMaterial.thickness = 0.5;
-glassMaterial.specularIntensity = 1.0;
-glassMaterial.clearCoat = 1.0;
-glassMaterial.color = new THREE.Color(1, 1, 10);
+const glassMeshes = []; // Array para almacenar las meshes
 
-const isocahedrumGeometry = new THREE.IcosahedronGeometry(10);
+function generateGlassElements() {
+  const glassMaterial = new THREE.MeshPhysicalMaterial({
+    transmission: 1.0,
+    ior: 0.7,
+    thickness: 0.5,
+    specularIntensity: 1.0,
+    clearCoat: 1.0,
+    color: new THREE.Color(1, 1, 10),
+  });
 
-const glassIcosahedrum = new THREE.Mesh(isocahedrumGeometry, glassMaterial);
+  const isocahedrumGeometry = new THREE.IcosahedronGeometry(15);
+  const octahedrumGeometry = new THREE.OctahedronGeometry(15);
+  const boxGeometry = new THREE.BoxGeometry(15, 15, 15);
+
+  const glassIcosahedrum = new THREE.Mesh(isocahedrumGeometry, glassMaterial);
+  const glassOctahedrum = new THREE.Mesh(octahedrumGeometry, glassMaterial);
+  const glassBox = new THREE.Mesh(boxGeometry, glassMaterial);
+
+  const meshes = [glassIcosahedrum, glassOctahedrum, glassBox];
+  const positions = [];
+
+  function isPositionValid(newPosition, minDistance) {
+    for (const pos of positions) {
+      const distance = pos.distanceTo(newPosition);
+      if (distance < minDistance) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function generateValidPosition(minDistance) {
+    let validPosition;
+    do {
+      const x = THREE.MathUtils.randInt(-80, 80);
+      const z = THREE.MathUtils.randInt(-80, 80);
+      const y = THREE.MathUtils.randInt(30, 60);
+      validPosition = new THREE.Vector3(x, y, z);
+    } while (!isPositionValid(validPosition, minDistance));
+    return validPosition;
+  }
+
+  const minDistance = 60; // Distancia mínima de separación
+
+  for (const mesh of meshes) {
+    const pos = generateValidPosition(minDistance);
+    mesh.position.set(pos.x, pos.y, pos.z);
+    positions.push(new THREE.Vector2(pos.x, pos.z)); // Almacenar solo X y Z para la validación de distancia
+    scene.add(mesh);
+  }
+
+  // Animar la rotación de los objetos
+  function animate() {
+    requestAnimationFrame(animate);
+
+    // Ajustar la velocidad de rotación
+    const rotationSpeed = 0.01;
+    meshes.forEach((mesh) => {
+      mesh.rotation.x += rotationSpeed;
+      mesh.rotation.y += rotationSpeed;
+    });
+
+    renderer.render(scene, camera);
+  }
+
+  // Iniciar la animación
+  animate();
+}
 
 function createCubesArray() {
   // Geometría de un cubo básico
@@ -99,11 +158,11 @@ let progress = 0;
 let speed = 1; // Velocidad inicial alta
 const slowdownFactor = 0.99; // Factor de desaceleración
 const minimumSpeed = 0.01; // Velocidad mínima para que sea casi imperceptible
-const minimumCameraHeight = 100;
 
 // Añadir a la escena
-scene.add(ambientLight, glassIcosahedrum);
-// createCubesArray();
+generateGlassElements();
+createCubesArray();
+scene.add(ambientLight);
 
 function animate() {
   // Actualizar los controles
@@ -120,8 +179,8 @@ function animate() {
 
   const time = progress * 0.0001;
   camera.rotation.z = Math.sqrt(time % 10);
-  if (camera.position.y > minimumCameraHeight) {
-    camera.position.y -= time;
+  if (camera.position.y > 120) {
+    camera.position.y -= Math.sqrt(time / 100);
   }
 
   renderer.render(scene, camera);
